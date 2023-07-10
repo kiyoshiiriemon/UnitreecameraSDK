@@ -17,6 +17,13 @@ target_link_libraries(example_putImagetrans ${SDKLIBS})
 add_executable(example_getimagetrans ./example_getimagetrans.cc)
 target_link_libraries(example_getimagetrans ${SDKLIBS})
 
+add_executable(image_server ./image_server.cc)
+target_link_libraries(image_server ${SDKLIBS} zmq)
+
+add_executable(recv_image_test ./recv_image_test.cc)
+target_link_libraries(recv_image_test ${SDKLIBS} zmq)
+
+
 # add_executable(example_share ./example_share.cc)
 # target_link_libraries(example_share ${SDKLIBS})
 
@@ -61,6 +68,6 @@ target_link_libraries(example_getPointCloud ${SDKLIBS} ${OPENGL_LIBRARIES} ${GLU
 endif()
 
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pthread")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -pthread")
 
 
