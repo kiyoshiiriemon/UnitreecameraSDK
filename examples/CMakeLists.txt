@@ -23,6 +23,9 @@ target_link_libraries(image_server ${SDKLIBS} zmq)
 add_executable(recv_image_test ./recv_image_test.cc)
 target_link_libraries(recv_image_test ${SDKLIBS} zmq)
 
+add_executable(recv_image_dual ./recv_image_dual.cc)
+target_link_libraries(recv_image_dual ${SDKLIBS} zmq)
+
 
 # add_executable(example_share ./example_share.cc)
 # target_link_libraries(example_share ${SDKLIBS})
