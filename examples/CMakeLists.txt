@@ -1,3 +1,11 @@
+find_package(Boost COMPONENTS system REQUIRED)
+link_directories($ENV{DARKNET_PATH}
+    ${Boost_LIBRARY_DIRS}
+)
+include_directories($ENV{DARKNET_PATH}/include
+                    $ENV{DARKNET_PATH}/src
+                    ${Boost_INCLUDE_DIRS}
+                    )
 
 add_executable(example_getRawFrame ./example_getRawFrame.cc)
 target_link_libraries(example_getRawFrame ${SDKLIBS})
@@ -25,6 +33,15 @@ target_link_libraries(recv_image_test ${SDKLIBS} zmq)
 
 add_executable(recv_image_dual ./recv_image_dual.cc)
 target_link_libraries(recv_image_dual ${SDKLIBS} zmq)
+
+add_executable(recv_image_detect ./recv_image_detect.cc)
+target_link_libraries(recv_image_detect ${SDKLIBS} zmq darknet)
+
+add_executable(test_detect_objects ./test_detect_objects.cc)
+target_link_libraries(test_detect_objects ${SDKLIBS} zmq darknet)
+
+add_executable(detect_objects_uvc ./detect_objects_uvc.cc)
+target_link_libraries(detect_objects_uvc ${SDKLIBS} darknet)
 
 
 # add_executable(example_share ./example_share.cc)
