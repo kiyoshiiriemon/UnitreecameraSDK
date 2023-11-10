@@ -11,6 +11,8 @@
 #include "object_detector.hh"
 #include <boost/asio.hpp>
 
+#define USE_LEFT_CAMERA 0
+
 std::string getTimeStampedFolderName() {
     // Get current time
     std::time_t t = std::time(0);
@@ -60,7 +62,7 @@ cv::Mat receiveImage(zmq::socket_t& socket, const std::string& serverName) {
     }
 }
 
-void detect_and_send(ObjectDetector &detector, boost::asio::ip::udp::socket &socket, cv::Mat &image, const std::string &camera_name)
+std::vector<DetectedObject> detect_and_send(ObjectDetector &detector, boost::asio::ip::udp::socket &socket, cv::Mat &image, const std::string &camera_name)
 {
     boost::asio::ip::udp::endpoint endpoint(boost::asio::ip::address::from_string("127.0.0.1"), 12346);
     std::vector<DetectedObject> objects = detector.detect(image);
@@ -79,6 +81,7 @@ void detect_and_send(ObjectDetector &detector, boost::asio::ip::udp::socket &soc
         std::string message = camera_name + ",none,0,0,0,0,0";
         socket.send_to(boost::asio::buffer(message), endpoint);
     }
+    return objects;
 }
 
 int main(int argc, char *argv[]) {
@@ -95,7 +98,9 @@ int main(int argc, char *argv[]) {
 
     std::cout << "Connecting to servers…" << std::endl;
     socket1.connect("tcp://192.168.123.13:25661");
-    socket2.connect("tcp://192.168.123.14:25661");
+#if USE_LEFT_CAMERA == 1
+    //socket2.connect("tcp://192.168.123.14:25661");
+#endif
 
     // Generate time stamped folder name and create the directory
     std::string folderName1 = getTimeStampedFolderName() + "_front";
@@ -106,11 +111,15 @@ int main(int argc, char *argv[]) {
     int counter = 0;
 
     while (true) {
-        cv::Mat img1 = receiveImage(socket1, "server 1 (front)");
-        cv::Mat img2 = receiveImage(socket2, "server 2 (left)");
+        cv::Mat capimg = receiveImage(socket1, "server 1 (front)");
+        cv::Mat img1 = cv::Mat(capimg, cv::Rect(100, 70, 730, 730)); //for go1-aka
+        auto objects = detect_and_send(detector, socket, img1, "camera_front");
 
-        detect_and_send(detector, socket, img1, "camera_front");
-        //detectObjects(detector, img2);
+#if USE_LEFT_CAMERA == 1
+        cv::Mat img2 = receiveImage(socket2, "server 2 (left)");
+        detectObjects(detector, img2);
+#endif
+
         // Save the image from server 1
         std::stringstream ss1;
         ss1 << folderName1 << "/image_" << std::setfill('0') << std::setw(5) << counter << ".jpg";
@@ -120,6 +129,8 @@ int main(int argc, char *argv[]) {
         }
         std::cout << "Image received from server 1 (front) and saved to " << ss1.str() << std::endl;
 
+        cv::Mat img = img1;
+#if USE_LEFT_CAMERA == 1
         // Save the image from server 2
         std::stringstream ss2;
         ss2 << folderName2 << "/image_" << std::setfill('0') << std::setw(5) << counter << ".jpg";
@@ -130,19 +141,30 @@ int main(int argc, char *argv[]) {
         std::cout << "Image received from server 2 (left) and saved to " << ss2.str() << std::endl;
 
         // Combine the two images horizontally
-        cv::Mat img;
         cv::hconcat(img1, img2, img);
+#endif
+
+        for (const auto &det : objects) {
+            int left  = (det.bbox.x - det.bbox.w / 2) * img.cols;
+            int right = (det.bbox.x + det.bbox.w / 2) * img.cols;
+            int top   = (det.bbox.y - det.bbox.h / 2) * img.rows;
+            int bot   = (det.bbox.y + det.bbox.h / 2) * img.rows;
+
+            cv::rectangle(img, cv::Point(left, top), cv::Point(right, bot), cv::Scalar(0, 255, 0), 3);
+            std::string label = det.name + " " + std::to_string((int)(det.confidence * 100)) + "%";
+            cv::putText(img, label, cv::Point(left, top - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 2);
+        }
+
 
         // Show the combined image
+        cv::resize(img, img, cv::Size(), 0.5, 0.5);
         cv::imshow("Received Images (front | left)", img);
 
         counter++;
 
-        if (cv::waitKey(30) >= 0) break;
+        if (cv::waitKey(50) >= 0) break;
         //if (cv::waitKey(30) >= 0) break;
 
-        // Wait for 1 second
-        std::this_thread::sleep_for(std::chrono::seconds(200));
     }
 
     return 0;
