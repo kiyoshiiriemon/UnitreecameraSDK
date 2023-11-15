@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
         // Save the image from server 1
         std::stringstream ss1;
         ss1 << folderName1 << "/image_" << std::setfill('0') << std::setw(5) << counter << ".jpg";
-        if (!cv::imwrite(ss1.str(), img1)) {
+        if (!cv::imwrite(ss1.str(), capimg)) {
             std::cerr << "Could not write image to file: " << ss1.str() << std::endl;
             break;
         }
